@@ -119,8 +119,7 @@ bool
 NativeStateWayland::create_window(WindowProperties const& properties)
 {
     window_ = new struct my_window;
-    window_->properties.width = properties.width;
-    window_->properties.height = properties.height;
+    window_->properties = properties;
     window_->surface = wl_compositor_create_surface(display_->compositor);
     window_->native = wl_egl_window_create(window_->surface, properties.width, properties.height);
     window_->shell_surface = wl_shell_get_shell_surface(display_->shell, window_->surface);
