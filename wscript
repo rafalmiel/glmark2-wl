@@ -107,7 +107,8 @@ def configure(ctx):
                 ('libdrm','drm', list_contains(Options.options.flavors, 'drm')),
                 ('gbm','gbm', list_contains(Options.options.flavors, 'drm')),
                 ('mirclient','mirclient', list_contains(Options.options.flavors, 'mir')),
-                ('wayland-client','wayland-client', list_contains(Options.options.flavors, 'wayland'))]
+                ('wayland-client','wayland-client', list_contains(Options.options.flavors, 'wayland')),
+                ('wayland-egl','wayland-egl', list_contains(Options.options.flavors, 'wayland'))]
     for (pkg, uselib, mandatory) in opt_pkgs:
         ctx.check_cfg(package = pkg, uselib_store = uselib,
                       args = '--cflags --libs', mandatory = mandatory)
