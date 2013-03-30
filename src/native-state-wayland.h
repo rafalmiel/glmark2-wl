@@ -95,7 +95,7 @@ private:
     static void
     seat_handle_capabilities(void *data, struct wl_seat *wl_seat, uint32_t capabilities);
 
-    static struct my_display {
+    struct my_display {
         wl_display *display;
         wl_registry *registry;
         wl_compositor *compositor;
@@ -103,14 +103,16 @@ private:
         struct xkb_context *xkb_context;
     } *display_;
 
-    static struct my_window {
+    struct my_window {
         WindowProperties properties;
         struct wl_surface *surface;
         struct wl_egl_window *native;
         struct wl_shell_surface *shell_surface;
+        bool maximized;
+        int saved_width, saved_height;
     } *window_;
 
-    static struct my_input {
+    struct my_input {
         wl_seat *seat;
         wl_keyboard *keyboard;
 
@@ -123,7 +125,7 @@ private:
         } xkb;
     } *input_;
 
-    static volatile std::sig_atomic_t should_quit_;
+    static volatile bool should_quit_;
 };
 
 #endif /* GLMARK2_NATIVE_STATE_WAYLAND_H_ */

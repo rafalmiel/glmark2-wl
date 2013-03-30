@@ -51,14 +51,11 @@ const struct wl_keyboard_listener NativeStateWayland::keyboard_listener_ = {
     NativeStateWayland::keyboard_handle_modifiers
 };
 
-struct NativeStateWayland::my_display *NativeStateWayland::display_ = 0;
-struct NativeStateWayland::my_window *NativeStateWayland::window_ = 0;
-struct NativeStateWayland::my_input *NativeStateWayland::input_ = 0;
+volatile bool NativeStateWayland::should_quit_ = false;
 
-volatile sig_atomic_t NativeStateWayland::should_quit_(false);
-
-NativeStateWayland::NativeStateWayland()
+NativeStateWayland::NativeStateWayland() : display_(0), window_(0), input_(0)
 {
+    fprintf(stderr, "init %d\n", should_quit_);
 }
 
 NativeStateWayland::~NativeStateWayland()
@@ -79,23 +76,23 @@ NativeStateWayland::registry_handle_global(void *data, struct wl_registry *regis
                                            uint32_t id, const char *interface, uint32_t version)
 {
     (void) version;
-    (void) data;
+    NativeStateWayland *that = static_cast<NativeStateWayland *>(data);
     if (strcmp(interface, "wl_compositor") == 0) {
-        display_->compositor =
+        that->display_->compositor =
                 static_cast<struct wl_compositor *>(
                     wl_registry_bind(registry,
                                      id, &wl_compositor_interface, 1));
     } else if (strcmp(interface, "wl_shell") == 0) {
-        display_->shell =
+        that->display_->shell =
                 static_cast<struct wl_shell *>(
                     wl_registry_bind(registry,
                                      id, &wl_shell_interface, 1));
     } else if (strcmp(interface, "wl_seat") == 0) {
-        input_->seat =
+        that->input_->seat =
                 static_cast<struct wl_seat *>(
                     wl_registry_bind(registry,
                                      id, &wl_seat_interface, 1));
-        wl_seat_add_listener(input_->seat, &seat_listener_, NULL);
+        wl_seat_add_listener(that->input_->seat, &seat_listener_, that);
     }
 }
 
@@ -127,20 +124,24 @@ void
 NativeStateWayland::shell_surface_handle_configure(void *data, struct wl_shell_surface *shell_surface,
          uint32_t edges, int32_t width, int32_t height)
 {
-    (void) data;
     (void) shell_surface;
     (void) edges;
-    window_->properties.width = width;
-    window_->properties.height = height;
-    wl_egl_window_resize(window_->native, width, height, 0, 0);
+    NativeStateWayland *that = static_cast<NativeStateWayland *>(data);
+    that->window_->properties.width = width;
+    that->window_->properties.height = height;
+    //wl_egl_window_destroy(that->window_->native);
+    //that->window_->native = wl_egl_window_create(that->window_->surface, width, height);
+    wl_egl_window_resize(that->window_->native, width, height, 0, 0);
+    /*wl_surface_damage(that->window_->surface, 0, 0, width, height);
+    wl_surface_commit(that->window_->surface);*/
 }
 
 void
 NativeStateWayland::keyboard_handle_keymap(void *data, wl_keyboard *wl_keyboard,
                                            uint32_t format, int32_t fd, uint32_t size)
 {
-    (void) data;
     (void) wl_keyboard;
+    NativeStateWayland *that = static_cast<NativeStateWayland *>(data);
     char *map_str;
 
     if (format != WL_KEYBOARD_KEYMAP_FORMAT_XKB_V1) {
@@ -154,32 +155,32 @@ NativeStateWayland::keyboard_handle_keymap(void *data, wl_keyboard *wl_keyboard,
         return;
     }
 
-    input_->xkb.keymap = xkb_map_new_from_string(display_->xkb_context,
+    that->input_->xkb.keymap = xkb_map_new_from_string(that->display_->xkb_context,
                             map_str,
                             XKB_KEYMAP_FORMAT_TEXT_V1,
                             (xkb_keymap_compile_flags)0);
     munmap(map_str, size);
     close(fd);
 
-    if (!input_->xkb.keymap) {
+    if (!that->input_->xkb.keymap) {
         fprintf(stderr, "failed to compile keymap\n");
         return;
     }
 
-    input_->xkb.state = xkb_state_new(input_->xkb.keymap);
-    if (!input_->xkb.state) {
+    that->input_->xkb.state = xkb_state_new(that->input_->xkb.keymap);
+    if (!that->input_->xkb.state) {
         fprintf(stderr, "failed to create XKB state\n");
-        xkb_map_unref(input_->xkb.keymap);
-        input_->xkb.keymap = NULL;
+        xkb_map_unref(that->input_->xkb.keymap);
+        that->input_->xkb.keymap = NULL;
         return;
     }
 
-    input_->xkb.control_mask =
-        1 << xkb_map_mod_get_index(input_->xkb.keymap, "Control");
-    input_->xkb.alt_mask =
-        1 << xkb_map_mod_get_index(input_->xkb.keymap, "Mod1");
-    input_->xkb.shift_mask =
-        1 << xkb_map_mod_get_index(input_->xkb.keymap, "Shift");
+    that->input_->xkb.control_mask =
+        1 << xkb_map_mod_get_index(that->input_->xkb.keymap, "Control");
+    that->input_->xkb.alt_mask =
+        1 << xkb_map_mod_get_index(that->input_->xkb.keymap, "Mod1");
+    that->input_->xkb.shift_mask =
+        1 << xkb_map_mod_get_index(that->input_->xkb.keymap, "Shift");
 }
 
 void NativeStateWayland::keyboard_handle_enter(void *data, wl_keyboard *wl_keyboard,
@@ -206,27 +207,41 @@ void NativeStateWayland::keyboard_handle_key(void *data, wl_keyboard *wl_keyboar
                                              uint32_t serial, uint32_t time, uint32_t key,
                                              uint32_t state)
 {
-    (void) data;
     (void) wl_keyboard;
     (void) serial;
     (void) time;
     (void) state;
+    NativeStateWayland *that = static_cast<NativeStateWayland *>(data);
     uint32_t code, num_syms;
     const xkb_keysym_t *syms;
     xkb_keysym_t sym;
 
     code = key + 8;
-    if (!input_->xkb.state)
+    if (!that->input_->xkb.state)
         return;
 
-    num_syms = xkb_key_get_syms(input_->xkb.state, code, &syms);
+    num_syms = xkb_key_get_syms(that->input_->xkb.state, code, &syms);
 
     sym = XKB_KEY_NoSymbol;
     if (num_syms == 1)
         sym = syms[0];
 
     if (state == WL_KEYBOARD_KEY_STATE_RELEASED && (sym == XKB_KEY_q || sym == XKB_KEY_Q)) {
-        should_quit_ = true;
+        that->should_quit_ = true;
+    } else if (state == WL_KEYBOARD_KEY_STATE_RELEASED && (sym == XKB_KEY_m || sym == XKB_KEY_M)) {
+        if (that->window_->maximized) {
+            wl_shell_surface_set_toplevel(that->window_->shell_surface);
+            that->window_->maximized = false;
+            that->window_->properties.width = that->window_->saved_width;
+            that->window_->properties.height = that->window_->saved_height;
+            wl_egl_window_resize(that->window_->native, that->window_->saved_width, that->window_->saved_height, 0, 0);
+        } else {
+            that->window_->saved_width = that->window_->properties.width;
+            that->window_->saved_height = that->window_->properties.height;
+            that->window_->maximized = true;
+            wl_shell_surface_set_maximized(that->window_->shell_surface, NULL);
+            //wl_shell_surface_set_fullscreen(window_->shell_surface, WL_SHELL_SURFACE_FULLSCREEN_METHOD_DRIVER, 120, NULL);
+        }
     }
 }
 
@@ -249,10 +264,10 @@ NativeStateWayland::seat_handle_capabilities(void *data,
                                              struct wl_seat *wl_seat,
                                              uint32_t capabilities)
 {
-    (void) data;
-    if (capabilities & WL_SEAT_CAPABILITY_KEYBOARD && !input_->keyboard) {
-        input_->keyboard = wl_seat_get_keyboard(wl_seat);
-        wl_keyboard_add_listener(input_->keyboard, &keyboard_listener_, NULL);
+    NativeStateWayland *that = static_cast<NativeStateWayland *>(data);
+    if (capabilities & WL_SEAT_CAPABILITY_KEYBOARD && !that->input_->keyboard) {
+        that->input_->keyboard = wl_seat_get_keyboard(wl_seat);
+        wl_keyboard_add_listener(that->input_->keyboard, &that->keyboard_listener_, that);
     }
 }
 
@@ -278,7 +293,7 @@ NativeStateWayland::init_display()
 
     display_->registry = wl_display_get_registry(display_->display);
 
-    wl_registry_add_listener(display_->registry, &registry_listener_, NULL);
+    wl_registry_add_listener(display_->registry, &registry_listener_, this);
 
     wl_display_roundtrip(display_->display);
 
@@ -299,16 +314,18 @@ NativeStateWayland::create_window(WindowProperties const& properties)
     window_->surface = wl_compositor_create_surface(display_->compositor);
     window_->native = wl_egl_window_create(window_->surface, properties.width, properties.height);
     window_->shell_surface = wl_shell_get_shell_surface(display_->shell, window_->surface);
+    window_->maximized = false;
 
     if (window_->shell_surface) {
         wl_shell_surface_add_listener(window_->shell_surface,
-                                      &shell_surface_listener_, NULL);
+                                      &shell_surface_listener_, this);
     }
 
     wl_shell_surface_set_title(window_->shell_surface, "glmark2");
 
     if (window_->properties.fullscreen) {
-        wl_shell_surface_set_fullscreen(window_->shell_surface, WL_SHELL_SURFACE_FULLSCREEN_METHOD_DEFAULT, 60, NULL);
+        wl_shell_surface_set_fullscreen(window_->shell_surface,
+                                        WL_SHELL_SURFACE_FULLSCREEN_METHOD_DEFAULT, 60, NULL);
     } else {
         wl_shell_surface_set_toplevel(window_->shell_surface);
     }
