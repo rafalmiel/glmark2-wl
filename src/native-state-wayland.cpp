@@ -374,7 +374,7 @@ NativeStateWayland::create_window(WindowProperties const& properties)
 
     if (window_->properties.fullscreen) {
         wl_shell_surface_set_fullscreen(window_->shell_surface,
-                                        WL_SHELL_SURFACE_FULLSCREEN_METHOD_DRIVER, output->refresh, NULL);
+                                        WL_SHELL_SURFACE_FULLSCREEN_METHOD_DRIVER, output->refresh, output->output);
     } else {
         wl_shell_surface_set_toplevel(window_->shell_surface);
     }
