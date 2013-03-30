@@ -64,15 +64,28 @@ NativeStateWayland::NativeStateWayland() : display_(0), window_(0), input_(0)
 
 NativeStateWayland::~NativeStateWayland()
 {
-    if (display_->compositor)
-        wl_compositor_destroy(display_->compositor);
+    wl_shell_surface_destroy(window_->shell_surface);
+    wl_surface_destroy(window_->surface);
+    wl_egl_window_destroy(window_->native);
+    delete window_;
 
+    wl_keyboard_destroy(input_->keyboard);
+    wl_seat_destroy(input_->seat);
+    xkb_state_unref(input_->xkb.state);
+    xkb_keymap_unref(input_->xkb.keymap);
+    xkb_context_unref(display_->xkb_context);
+    delete input_;
+
+    wl_shell_destroy(display_->shell);
+    for (size_t i = 0; i < display_->outputs.size(); ++i) {
+        wl_output_destroy(display_->outputs.at(i)->output);
+        delete display_->outputs.at(i);
+    }
+    wl_compositor_destroy(display_->compositor);
     wl_registry_destroy(display_->registry);
     wl_display_flush(display_->display);
     wl_display_disconnect(display_->display);
-
     delete display_;
-    display_ = 0;
 }
 
 void
