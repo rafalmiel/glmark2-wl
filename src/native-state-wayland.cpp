@@ -51,11 +51,15 @@ const struct wl_keyboard_listener NativeStateWayland::keyboard_listener_ = {
     NativeStateWayland::keyboard_handle_modifiers
 };
 
+const struct wl_output_listener NativeStateWayland::output_listener_ = {
+    NativeStateWayland::output_handle_geometry,
+    NativeStateWayland::output_handle_mode
+};
+
 volatile bool NativeStateWayland::should_quit_ = false;
 
 NativeStateWayland::NativeStateWayland() : display_(0), window_(0), input_(0)
 {
-    fprintf(stderr, "init %d\n", should_quit_);
 }
 
 NativeStateWayland::~NativeStateWayland()
@@ -93,6 +97,17 @@ NativeStateWayland::registry_handle_global(void *data, struct wl_registry *regis
                     wl_registry_bind(registry,
                                      id, &wl_seat_interface, 1));
         wl_seat_add_listener(that->input_->seat, &seat_listener_, that);
+    } else if (strcmp(interface, "wl_output") == 0) {
+        struct my_output *my_output = new struct my_output;
+        memset(my_output, 0, sizeof(*my_output));
+        my_output->output =
+                static_cast<struct wl_output *>(
+                    wl_registry_bind(registry,
+                                     id, &wl_output_interface, 1));
+        that->display_->outputs.push_back(my_output);
+
+        wl_output_add_listener(my_output->output, &output_listener_, my_output);
+        wl_display_roundtrip(that->display_->display);
     }
 }
 
@@ -103,6 +118,36 @@ NativeStateWayland::registry_handle_global_remove(void *data, struct wl_registry
     (void) data;
     (void) registry;
     (void) name;
+}
+
+void
+NativeStateWayland::output_handle_geometry(void *data, struct wl_output *wl_output,
+         int32_t x, int32_t y, int32_t physical_width, int32_t physical_height,
+         int32_t subpixel, const char *make, const char *model, int32_t transform)
+{
+    (void) data;
+    (void) wl_output;
+    (void) x;
+    (void) y;
+    (void) physical_width;
+    (void) physical_height;
+    (void) subpixel;
+    (void) make;
+    (void) model;
+    (void) transform;
+
+}
+
+void
+NativeStateWayland::output_handle_mode(void *data, struct wl_output *wl_output, uint32_t flags,
+         int32_t width, int32_t height, int32_t refresh)
+{
+    (void) wl_output;
+    (void) flags;
+    struct my_output *my_output = static_cast<struct my_output *>(data);
+    my_output->width = width;
+    my_output->height = height;
+    my_output->refresh = refresh;
 }
 
 void
@@ -129,11 +174,7 @@ NativeStateWayland::shell_surface_handle_configure(void *data, struct wl_shell_s
     NativeStateWayland *that = static_cast<NativeStateWayland *>(data);
     that->window_->properties.width = width;
     that->window_->properties.height = height;
-    //wl_egl_window_destroy(that->window_->native);
-    //that->window_->native = wl_egl_window_create(that->window_->surface, width, height);
     wl_egl_window_resize(that->window_->native, width, height, 0, 0);
-    /*wl_surface_damage(that->window_->surface, 0, 0, width, height);
-    wl_surface_commit(that->window_->surface);*/
 }
 
 void
@@ -309,10 +350,18 @@ NativeStateWayland::display()
 bool
 NativeStateWayland::create_window(WindowProperties const& properties)
 {
+    struct my_output *output = 0;
+    if (!display_->outputs.empty()) output = display_->outputs.at(0);
     window_ = new struct my_window;
     window_->properties = properties;
     window_->surface = wl_compositor_create_surface(display_->compositor);
-    window_->native = wl_egl_window_create(window_->surface, properties.width, properties.height);
+    if (window_->properties.fullscreen && output) {
+        window_->native = wl_egl_window_create(window_->surface, output->width, output->height);
+        window_->properties.width = output->width;
+        window_->properties.height = output->height;
+    } else {
+        window_->native = wl_egl_window_create(window_->surface, properties.width, properties.height);
+    }
     window_->shell_surface = wl_shell_get_shell_surface(display_->shell, window_->surface);
     window_->maximized = false;
 
@@ -325,11 +374,10 @@ NativeStateWayland::create_window(WindowProperties const& properties)
 
     if (window_->properties.fullscreen) {
         wl_shell_surface_set_fullscreen(window_->shell_surface,
-                                        WL_SHELL_SURFACE_FULLSCREEN_METHOD_DEFAULT, 60, NULL);
+                                        WL_SHELL_SURFACE_FULLSCREEN_METHOD_DRIVER, output->refresh, NULL);
     } else {
         wl_shell_surface_set_toplevel(window_->shell_surface);
     }
-
 
     return true;
 }

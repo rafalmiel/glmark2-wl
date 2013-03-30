@@ -23,6 +23,7 @@
 #ifndef GLMARK2_NATIVE_STATE_WAYLAND_H_
 #define GLMARK2_NATIVE_STATE_WAYLAND_H_
 
+#include <vector>
 #include <csignal>
 #include <EGL/egl.h>
 #include <xkbcommon/xkbcommon.h>
@@ -51,6 +52,7 @@ private:
     static const struct wl_shell_surface_listener shell_surface_listener_;
     static const struct wl_keyboard_listener keyboard_listener_;
     static const struct wl_seat_listener seat_listener_;
+    static const struct wl_output_listener output_listener_;
 
     static void
     registry_handle_global(void *data, struct wl_registry *registry,
@@ -58,6 +60,15 @@ private:
     static void
     registry_handle_global_remove(void *data, struct wl_registry *registry,
                                   uint32_t name);
+
+    static void
+    output_handle_geometry(void *data, struct wl_output *wl_output,
+             int32_t x, int32_t y, int32_t physical_width, int32_t physical_height,
+             int32_t subpixel, const char *make, const char *model, int32_t transform);
+
+    static void
+    output_handle_mode(void *data, struct wl_output *wl_output, uint32_t flags,
+             int32_t width, int32_t height, int32_t refresh);
 
     static void
     shell_surface_handle_ping(void *data, struct wl_shell_surface *shell_surface,
@@ -95,11 +106,18 @@ private:
     static void
     seat_handle_capabilities(void *data, struct wl_seat *wl_seat, uint32_t capabilities);
 
+    struct my_output {
+        wl_output *output;
+        int32_t width, height;
+        int32_t refresh;
+    };
+
     struct my_display {
         wl_display *display;
         wl_registry *registry;
         wl_compositor *compositor;
         wl_shell *shell;
+        std::vector<struct my_output *> outputs;
         struct xkb_context *xkb_context;
     } *display_;
 
