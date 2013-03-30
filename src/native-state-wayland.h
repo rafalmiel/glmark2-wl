@@ -23,13 +23,14 @@
 #ifndef GLMARK2_NATIVE_STATE_WAYLAND_H_
 #define GLMARK2_NATIVE_STATE_WAYLAND_H_
 
-#include <stdint.h>
+#include <csignal>
+#include <EGL/egl.h>
+#include <xkbcommon/xkbcommon.h>
 
 #include "native-state.h"
 #include <wayland-client.h>
 #include <wayland-egl.h>
 
-#include <EGL/egl.h>
 
 class NativeStateWayland : public NativeState
 {
@@ -48,6 +49,8 @@ public:
 private:
     static const struct wl_registry_listener registry_listener_;
     static const struct wl_shell_surface_listener shell_surface_listener_;
+    static const struct wl_keyboard_listener keyboard_listener_;
+    static const struct wl_seat_listener seat_listener_;
 
     static void
     registry_handle_global(void *data, struct wl_registry *registry,
@@ -57,27 +60,85 @@ private:
                       uint32_t name);
 
     static void
-    handle_ping(void *data, struct wl_shell_surface *shell_surface,
+    shell_surface_handle_ping(void *data, struct wl_shell_surface *shell_surface,
                                 uint32_t serial);
     static void
-    handle_configure(void *data, struct wl_shell_surface *shell_surface,
+    shell_surface_handle_configure(void *data, struct wl_shell_surface *shell_surface,
              uint32_t edges, int32_t width, int32_t height);
     static void
-    handle_popup_done(void *data, struct wl_shell_surface *shell_surface);
+    shell_surface_handle_popup_done(void *data, struct wl_shell_surface *shell_surface);
 
-    struct my_display {
+    static void
+    keyboard_handle_keymap(void *data,
+                           struct wl_keyboard *wl_keyboard,
+                           uint32_t format,
+                           int32_t fd,
+                                   uint32_t size);
+
+    static void
+    keyboard_handle_enter(void *data,
+                          struct wl_keyboard *wl_keyboard,
+                          uint32_t serial,
+                          struct wl_surface *surface,
+                          struct wl_array *keys);
+
+    static void
+    keyboard_handle_leave(void *data,
+                          struct wl_keyboard *wl_keyboard,
+                          uint32_t serial,
+                          struct wl_surface *surface);
+
+    static void
+    keyboard_handle_key(void *data,
+                        struct wl_keyboard *wl_keyboard,
+                        uint32_t serial,
+                        uint32_t time,
+                        uint32_t key,
+                        uint32_t state);
+
+    static void
+    keyboard_handle_modifiers(void *data,
+                              struct wl_keyboard *wl_keyboard,
+                              uint32_t serial,
+                              uint32_t mods_depressed,
+                              uint32_t mods_latched,
+                              uint32_t mods_locked,
+                              uint32_t group);
+
+    static void
+    seat_handle_capabilities(void *data,
+                             struct wl_seat *wl_seat,
+                             uint32_t capabilities);
+
+    static struct my_display {
         wl_display *display;
         wl_registry *registry;
         wl_compositor *compositor;
         wl_shell *shell;
+        struct xkb_context *xkb_context;
     } *display_;
 
-    struct my_window {
+    static struct my_window {
         WindowProperties properties;
         struct wl_surface *surface;
         struct wl_egl_window *native;
         struct wl_shell_surface *shell_surface;
     } *window_;
+
+    static struct my_input {
+        wl_seat *seat;
+        wl_keyboard *keyboard;
+
+        struct {
+            struct xkb_keymap *keymap;
+            struct xkb_state *state;
+            xkb_mod_mask_t control_mask;
+            xkb_mod_mask_t alt_mask;
+            xkb_mod_mask_t shift_mask;
+        } xkb;
+    } *input_;
+
+    static volatile std::sig_atomic_t should_quit_;
 };
 
 #endif /* GLMARK2_NATIVE_STATE_WAYLAND_H_ */
