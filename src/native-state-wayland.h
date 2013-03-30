@@ -54,61 +54,46 @@ private:
 
     static void
     registry_handle_global(void *data, struct wl_registry *registry,
-                   uint32_t id, const char *interface, uint32_t version);
+                           uint32_t id, const char *interface, uint32_t version);
     static void
     registry_handle_global_remove(void *data, struct wl_registry *registry,
-                      uint32_t name);
+                                  uint32_t name);
 
     static void
     shell_surface_handle_ping(void *data, struct wl_shell_surface *shell_surface,
-                                uint32_t serial);
+                              uint32_t serial);
     static void
     shell_surface_handle_configure(void *data, struct wl_shell_surface *shell_surface,
-             uint32_t edges, int32_t width, int32_t height);
+                                   uint32_t edges, int32_t width, int32_t height);
     static void
     shell_surface_handle_popup_done(void *data, struct wl_shell_surface *shell_surface);
 
     static void
-    keyboard_handle_keymap(void *data,
-                           struct wl_keyboard *wl_keyboard,
-                           uint32_t format,
-                           int32_t fd,
-                                   uint32_t size);
+    keyboard_handle_keymap(void *data, struct wl_keyboard *wl_keyboard,
+                           uint32_t format, int32_t fd, uint32_t size);
 
     static void
-    keyboard_handle_enter(void *data,
-                          struct wl_keyboard *wl_keyboard,
-                          uint32_t serial,
-                          struct wl_surface *surface,
+    keyboard_handle_enter(void *data, struct wl_keyboard *wl_keyboard,
+                          uint32_t serial, struct wl_surface *surface,
                           struct wl_array *keys);
 
     static void
-    keyboard_handle_leave(void *data,
-                          struct wl_keyboard *wl_keyboard,
-                          uint32_t serial,
-                          struct wl_surface *surface);
+    keyboard_handle_leave(void *data, struct wl_keyboard *wl_keyboard,
+                          uint32_t serial, struct wl_surface *surface);
 
     static void
-    keyboard_handle_key(void *data,
-                        struct wl_keyboard *wl_keyboard,
-                        uint32_t serial,
-                        uint32_t time,
-                        uint32_t key,
+    keyboard_handle_key(void *data, struct wl_keyboard *wl_keyboard,
+                        uint32_t serial, uint32_t time, uint32_t key,
                         uint32_t state);
 
     static void
-    keyboard_handle_modifiers(void *data,
-                              struct wl_keyboard *wl_keyboard,
-                              uint32_t serial,
-                              uint32_t mods_depressed,
-                              uint32_t mods_latched,
-                              uint32_t mods_locked,
+    keyboard_handle_modifiers(void *data, struct wl_keyboard *wl_keyboard,
+                              uint32_t serial, uint32_t mods_depressed,
+                              uint32_t mods_latched, uint32_t mods_locked,
                               uint32_t group);
 
     static void
-    seat_handle_capabilities(void *data,
-                             struct wl_seat *wl_seat,
-                             uint32_t capabilities);
+    seat_handle_capabilities(void *data, struct wl_seat *wl_seat, uint32_t capabilities);
 
     static struct my_display {
         wl_display *display;

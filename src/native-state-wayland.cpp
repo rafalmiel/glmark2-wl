@@ -130,8 +130,6 @@ NativeStateWayland::shell_surface_handle_configure(void *data, struct wl_shell_s
     (void) data;
     (void) shell_surface;
     (void) edges;
-    (void) width;
-    (void) height;
     window_->properties.width = width;
     window_->properties.height = height;
     wl_egl_window_resize(window_->native, width, height, 0, 0);
@@ -141,12 +139,9 @@ void
 NativeStateWayland::keyboard_handle_keymap(void *data, wl_keyboard *wl_keyboard,
                                            uint32_t format, int32_t fd, uint32_t size)
 {
-    char *map_str;
     (void) data;
     (void) wl_keyboard;
-    (void) format;
-    (void) fd;
-    (void) size;
+    char *map_str;
 
     if (format != WL_KEYBOARD_KEYMAP_FORMAT_XKB_V1) {
         close(fd);
