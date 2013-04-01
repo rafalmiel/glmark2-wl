@@ -282,20 +282,6 @@ void NativeStateWayland::keyboard_handle_key(void *data, wl_keyboard *wl_keyboar
 
     if (state == WL_KEYBOARD_KEY_STATE_RELEASED && (sym == XKB_KEY_q || sym == XKB_KEY_Q)) {
         that->should_quit_ = true;
-    } else if (state == WL_KEYBOARD_KEY_STATE_RELEASED && (sym == XKB_KEY_m || sym == XKB_KEY_M)) {
-        if (that->window_->maximized) {
-            wl_shell_surface_set_toplevel(that->window_->shell_surface);
-            that->window_->maximized = false;
-            that->window_->properties.width = that->window_->saved_width;
-            that->window_->properties.height = that->window_->saved_height;
-            wl_egl_window_resize(that->window_->native, that->window_->saved_width, that->window_->saved_height, 0, 0);
-        } else {
-            that->window_->saved_width = that->window_->properties.width;
-            that->window_->saved_height = that->window_->properties.height;
-            that->window_->maximized = true;
-            wl_shell_surface_set_maximized(that->window_->shell_surface, NULL);
-            //wl_shell_surface_set_fullscreen(window_->shell_surface, WL_SHELL_SURFACE_FULLSCREEN_METHOD_DRIVER, 120, NULL);
-        }
     }
 }
 
@@ -376,7 +362,6 @@ NativeStateWayland::create_window(WindowProperties const& properties)
         window_->native = wl_egl_window_create(window_->surface, properties.width, properties.height);
     }
     window_->shell_surface = wl_shell_get_shell_surface(display_->shell, window_->surface);
-    window_->maximized = false;
 
     if (window_->shell_surface) {
         wl_shell_surface_add_listener(window_->shell_surface,

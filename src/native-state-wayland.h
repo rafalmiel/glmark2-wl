@@ -126,8 +126,6 @@ private:
         struct wl_surface *surface;
         struct wl_egl_window *native;
         struct wl_shell_surface *shell_surface;
-        bool maximized;
-        int saved_width, saved_height;
     } *window_;
 
     struct my_input {
