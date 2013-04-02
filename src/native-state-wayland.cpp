@@ -406,6 +406,6 @@ void
 NativeStateWayland::flip()
 {
     int ret = wl_display_dispatch(display_->display);
-    should_quit_ = (ret == -1);
+    should_quit_ = (ret == -1) || should_quit_;
 }
 
