@@ -55,15 +55,18 @@ private:
 
     static void
     registry_handle_global(void *data, struct wl_registry *registry,
-                           uint32_t id, const char *interface, uint32_t version);
+                           uint32_t id, const char *interface,
+                           uint32_t version);
     static void
     registry_handle_global_remove(void *data, struct wl_registry *registry,
                                   uint32_t name);
 
     static void
     output_handle_geometry(void *data, struct wl_output *wl_output,
-             int32_t x, int32_t y, int32_t physical_width, int32_t physical_height,
-             int32_t subpixel, const char *make, const char *model, int32_t transform);
+                           int32_t x, int32_t y, int32_t physical_width,
+                           int32_t physical_height, int32_t subpixel,
+                           const char *make, const char *model,
+                           int32_t transform);
 
     static void
     output_handle_mode(void *data, struct wl_output *wl_output, uint32_t flags,
@@ -73,10 +76,13 @@ private:
     shell_surface_handle_ping(void *data, struct wl_shell_surface *shell_surface,
                               uint32_t serial);
     static void
-    shell_surface_handle_configure(void *data, struct wl_shell_surface *shell_surface,
-                                   uint32_t edges, int32_t width, int32_t height);
+    shell_surface_handle_configure(void *data,
+                                   struct wl_shell_surface *shell_surface,
+                                   uint32_t edges,
+                                   int32_t width, int32_t height);
     static void
-    shell_surface_handle_popup_done(void *data, struct wl_shell_surface *shell_surface);
+    shell_surface_handle_popup_done(void *data,
+                                    struct wl_shell_surface *shell_surface);
 
     static void
     keyboard_handle_keymap(void *data, struct wl_keyboard *wl_keyboard,
@@ -103,7 +109,8 @@ private:
                               uint32_t group);
 
     static void
-    seat_handle_capabilities(void *data, struct wl_seat *wl_seat, uint32_t capabilities);
+    seat_handle_capabilities(void *data, struct wl_seat *wl_seat,
+                             uint32_t capabilities);
 
     struct my_output {
         wl_output *output;

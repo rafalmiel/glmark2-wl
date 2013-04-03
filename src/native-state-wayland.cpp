@@ -212,13 +212,16 @@ NativeStateWayland::create_window(WindowProperties const& properties)
     window_->properties = properties;
     window_->surface = wl_compositor_create_surface(display_->compositor);
     if (window_->properties.fullscreen && output) {
-        window_->native = wl_egl_window_create(window_->surface, output->width, output->height);
+        window_->native = wl_egl_window_create(window_->surface,
+                                               output->width, output->height);
         window_->properties.width = output->width;
         window_->properties.height = output->height;
     } else {
-        window_->native = wl_egl_window_create(window_->surface, properties.width, properties.height);
+        window_->native = wl_egl_window_create(window_->surface,
+                                               properties.width, properties.height);
     }
-    window_->shell_surface = wl_shell_get_shell_surface(display_->shell, window_->surface);
+    window_->shell_surface = wl_shell_get_shell_surface(display_->shell,
+                                                        window_->surface);
 
     if (window_->shell_surface) {
         wl_shell_surface_add_listener(window_->shell_surface,
@@ -229,7 +232,8 @@ NativeStateWayland::create_window(WindowProperties const& properties)
 
     if (window_->properties.fullscreen) {
         wl_shell_surface_set_fullscreen(window_->shell_surface,
-                                        WL_SHELL_SURFACE_FULLSCREEN_METHOD_DRIVER, output->refresh, output->output);
+                                        WL_SHELL_SURFACE_FULLSCREEN_METHOD_DRIVER,
+                                        output->refresh, output->output);
     } else {
         wl_shell_surface_set_toplevel(window_->shell_surface);
     }
