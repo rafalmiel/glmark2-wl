@@ -48,6 +48,8 @@ public:
     void flip();
 
 private:
+    static void quit_handler(int signum);
+
     static const struct wl_registry_listener registry_listener_;
     static const struct wl_shell_surface_listener shell_surface_listener_;
     static const struct wl_keyboard_listener keyboard_listener_;

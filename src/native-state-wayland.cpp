@@ -314,6 +314,14 @@ NativeStateWayland::seat_handle_capabilities(void *data,
 bool
 NativeStateWayland::init_display()
 {
+    struct sigaction sa;
+    sa.sa_handler = &NativeStateWayland::quit_handler;
+    sa.sa_flags = 0;
+    sigemptyset(&sa.sa_mask);
+
+    sigaction(SIGINT, &sa, NULL);
+    sigaction(SIGTERM, &sa, NULL);
+
     display_ = new struct my_display;
 
     if (!display_) {
@@ -407,5 +415,11 @@ NativeStateWayland::flip()
 {
     int ret = wl_display_dispatch(display_->display);
     should_quit_ = (ret == -1) || should_quit_;
+}
+
+void
+NativeStateWayland::quit_handler(int/* signum*/)
+{
+    should_quit_ = true;
 }
 
