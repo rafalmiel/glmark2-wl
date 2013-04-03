@@ -33,22 +33,10 @@ const struct wl_registry_listener NativeStateWayland::registry_listener_ = {
     NativeStateWayland::registry_handle_global_remove
 };
 
-const struct wl_seat_listener NativeStateWayland::seat_listener_ = {
-    NativeStateWayland::seat_handle_capabilities
-};
-
 const struct wl_shell_surface_listener NativeStateWayland::shell_surface_listener_ = {
     NativeStateWayland::shell_surface_handle_ping,
     NativeStateWayland::shell_surface_handle_configure,
     NativeStateWayland::shell_surface_handle_popup_done
-};
-
-const struct wl_keyboard_listener NativeStateWayland::keyboard_listener_ = {
-    NativeStateWayland::keyboard_handle_keymap,
-    NativeStateWayland::keyboard_handle_enter,
-    NativeStateWayland::keyboard_handle_leave,
-    NativeStateWayland::keyboard_handle_key,
-    NativeStateWayland::keyboard_handle_modifiers
 };
 
 const struct wl_output_listener NativeStateWayland::output_listener_ = {
@@ -58,7 +46,7 @@ const struct wl_output_listener NativeStateWayland::output_listener_ = {
 
 volatile bool NativeStateWayland::should_quit_ = false;
 
-NativeStateWayland::NativeStateWayland() : display_(0), window_(0), input_(0)
+NativeStateWayland::NativeStateWayland() : display_(0), window_(0)
 {
 }
 
@@ -68,13 +56,6 @@ NativeStateWayland::~NativeStateWayland()
     wl_surface_destroy(window_->surface);
     wl_egl_window_destroy(window_->native);
     delete window_;
-
-    wl_keyboard_destroy(input_->keyboard);
-    wl_seat_destroy(input_->seat);
-    xkb_state_unref(input_->xkb.state);
-    xkb_keymap_unref(input_->xkb.keymap);
-    xkb_context_unref(display_->xkb_context);
-    delete input_;
 
     wl_shell_destroy(display_->shell);
     for (size_t i = 0; i < display_->outputs.size(); ++i) {
@@ -104,12 +85,6 @@ NativeStateWayland::registry_handle_global(void *data, struct wl_registry *regis
                 static_cast<struct wl_shell *>(
                     wl_registry_bind(registry,
                                      id, &wl_shell_interface, 1));
-    } else if (strcmp(interface, "wl_seat") == 0) {
-        that->input_->seat =
-                static_cast<struct wl_seat *>(
-                    wl_registry_bind(registry,
-                                     id, &wl_seat_interface, 1));
-        wl_seat_add_listener(that->input_->seat, &seat_listener_, that);
     } else if (strcmp(interface, "wl_output") == 0) {
         struct my_output *my_output = new struct my_output;
         memset(my_output, 0, sizeof(*my_output));
@@ -190,127 +165,6 @@ NativeStateWayland::shell_surface_handle_configure(void *data, struct wl_shell_s
     wl_egl_window_resize(that->window_->native, width, height, 0, 0);
 }
 
-void
-NativeStateWayland::keyboard_handle_keymap(void *data, wl_keyboard *wl_keyboard,
-                                           uint32_t format, int32_t fd, uint32_t size)
-{
-    (void) wl_keyboard;
-    NativeStateWayland *that = static_cast<NativeStateWayland *>(data);
-    char *map_str;
-
-    if (format != WL_KEYBOARD_KEYMAP_FORMAT_XKB_V1) {
-        close(fd);
-        return;
-    }
-
-    map_str = (char*)mmap(NULL, size, PROT_READ, MAP_SHARED, fd, 0);
-    if (map_str == MAP_FAILED) {
-        close(fd);
-        return;
-    }
-
-    that->input_->xkb.keymap = xkb_map_new_from_string(that->display_->xkb_context,
-                            map_str,
-                            XKB_KEYMAP_FORMAT_TEXT_V1,
-                            (xkb_keymap_compile_flags)0);
-    munmap(map_str, size);
-    close(fd);
-
-    if (!that->input_->xkb.keymap) {
-        fprintf(stderr, "failed to compile keymap\n");
-        return;
-    }
-
-    that->input_->xkb.state = xkb_state_new(that->input_->xkb.keymap);
-    if (!that->input_->xkb.state) {
-        fprintf(stderr, "failed to create XKB state\n");
-        xkb_map_unref(that->input_->xkb.keymap);
-        that->input_->xkb.keymap = NULL;
-        return;
-    }
-
-    that->input_->xkb.control_mask =
-        1 << xkb_map_mod_get_index(that->input_->xkb.keymap, "Control");
-    that->input_->xkb.alt_mask =
-        1 << xkb_map_mod_get_index(that->input_->xkb.keymap, "Mod1");
-    that->input_->xkb.shift_mask =
-        1 << xkb_map_mod_get_index(that->input_->xkb.keymap, "Shift");
-}
-
-void NativeStateWayland::keyboard_handle_enter(void *data, wl_keyboard *wl_keyboard,
-                                               uint32_t serial, wl_surface *surface,
-                                               wl_array *keys)
-{
-    (void) data;
-    (void) wl_keyboard;
-    (void) serial;
-    (void) surface;
-    (void) keys;
-}
-
-void NativeStateWayland::keyboard_handle_leave(void *data, wl_keyboard *wl_keyboard,
-                                               uint32_t serial, wl_surface *surface)
-{
-    (void) data;
-    (void) wl_keyboard;
-    (void) serial;
-    (void) surface;
-}
-
-void NativeStateWayland::keyboard_handle_key(void *data, wl_keyboard *wl_keyboard,
-                                             uint32_t serial, uint32_t time, uint32_t key,
-                                             uint32_t state)
-{
-    (void) wl_keyboard;
-    (void) serial;
-    (void) time;
-    (void) state;
-    NativeStateWayland *that = static_cast<NativeStateWayland *>(data);
-    uint32_t code, num_syms;
-    const xkb_keysym_t *syms;
-    xkb_keysym_t sym;
-
-    code = key + 8;
-    if (!that->input_->xkb.state)
-        return;
-
-    num_syms = xkb_key_get_syms(that->input_->xkb.state, code, &syms);
-
-    sym = XKB_KEY_NoSymbol;
-    if (num_syms == 1)
-        sym = syms[0];
-
-    if (state == WL_KEYBOARD_KEY_STATE_RELEASED && (sym == XKB_KEY_q || sym == XKB_KEY_Q)) {
-        that->should_quit_ = true;
-    }
-}
-
-void NativeStateWayland::keyboard_handle_modifiers(void *data, wl_keyboard *wl_keyboard,
-                                                   uint32_t serial, uint32_t mods_depressed,
-                                                   uint32_t mods_latched, uint32_t mods_locked,
-                                                   uint32_t group)
-{
-    (void) data;
-    (void) wl_keyboard;
-    (void) serial;
-    (void) mods_depressed;
-    (void) mods_latched;
-    (void) mods_locked;
-    (void) group;
-}
-
-void
-NativeStateWayland::seat_handle_capabilities(void *data,
-                                             struct wl_seat *wl_seat,
-                                             uint32_t capabilities)
-{
-    NativeStateWayland *that = static_cast<NativeStateWayland *>(data);
-    if (capabilities & WL_SEAT_CAPABILITY_KEYBOARD && !that->input_->keyboard) {
-        that->input_->keyboard = wl_seat_get_keyboard(wl_seat);
-        wl_keyboard_add_listener(that->input_->keyboard, &that->keyboard_listener_, that);
-    }
-}
-
 bool
 NativeStateWayland::init_display()
 {
@@ -333,11 +187,6 @@ NativeStateWayland::init_display()
     if (!display_->display) {
         return false;
     }
-
-    display_->xkb_context = xkb_context_new((xkb_context_flags)0);
-
-    input_ = new struct my_input;
-    input_->keyboard = 0;
 
     display_->registry = wl_display_get_registry(display_->display);
 

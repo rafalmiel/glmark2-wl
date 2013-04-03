@@ -26,7 +26,6 @@
 #include <vector>
 #include <csignal>
 #include <EGL/egl.h>
-#include <xkbcommon/xkbcommon.h>
 
 #include "native-state.h"
 #include <wayland-client.h>
@@ -52,8 +51,6 @@ private:
 
     static const struct wl_registry_listener registry_listener_;
     static const struct wl_shell_surface_listener shell_surface_listener_;
-    static const struct wl_keyboard_listener keyboard_listener_;
-    static const struct wl_seat_listener seat_listener_;
     static const struct wl_output_listener output_listener_;
 
     static void
@@ -120,7 +117,6 @@ private:
         wl_compositor *compositor;
         wl_shell *shell;
         std::vector<struct my_output *> outputs;
-        struct xkb_context *xkb_context;
     } *display_;
 
     struct my_window {
@@ -129,19 +125,6 @@ private:
         struct wl_egl_window *native;
         struct wl_shell_surface *shell_surface;
     } *window_;
-
-    struct my_input {
-        wl_seat *seat;
-        wl_keyboard *keyboard;
-
-        struct {
-            struct xkb_keymap *keymap;
-            struct xkb_state *state;
-            xkb_mod_mask_t control_mask;
-            xkb_mod_mask_t alt_mask;
-            xkb_mod_mask_t shift_mask;
-        } xkb;
-    } *input_;
 
     static volatile bool should_quit_;
 };
